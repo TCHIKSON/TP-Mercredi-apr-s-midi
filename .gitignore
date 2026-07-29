@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# YOLO (poids telecharges automatiquement + resultats Ultralytics)
+yolo/*.pt
+yolo/runs/
+yolo/venv/
