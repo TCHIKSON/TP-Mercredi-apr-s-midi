@@ -7,13 +7,13 @@ partir de texte en executant le modele
 Space Hugging Face distant ni de token/quota. Un mini-frontend HTML/JS (servi
 par Django) permet de tester l'API dans le navigateur avec un lecteur audio.
 
-## Prerequis
+## Installation
 
-- **Python 3.11 a 3.13** (voir "Pourquoi pas Python 3.14" ci-dessous)
-- Les dependances du fichier [requirements.txt](requirements.txt) (PyTorch,
-  transformers, neutts, neucodec... installation volumineuse, plusieurs
-  centaines de Mo)
-- Pas de compte ni de token necessaire : tout tourne en local
+Prerequis : **Python 3.11 a 3.13** (voir "Pourquoi pas Python 3.14"
+ci-dessous), les dependances du fichier [requirements.txt](requirements.txt)
+(PyTorch, transformers, neutts, neucodec... installation volumineuse,
+plusieurs centaines de Mo). Pas de compte ni de token necessaire : tout
+tourne en local.
 
 ### Pourquoi pas Python 3.14
 
@@ -28,8 +28,6 @@ py -3.13 -m venv venv          # si plusieurs Python sont installes (Windows)
 # ou directement le chemin de l'interpreteur 3.13 si `python` pointe vers 3.14
 ```
 
-## Installation
-
 ```bash
 cd text2audio
 python -m venv venv
@@ -39,7 +37,9 @@ venv\Scripts\activate        # Windows
 pip install -r requirements.txt
 ```
 
-## Lancer l'API
+## Utilisation
+
+### Lancer l'API
 
 ```bash
 python manage.py runserver
@@ -58,9 +58,9 @@ selon la connexion et la machine (CPU) ; les appels suivants sont rapides.
 Lors des tests, une phrase courte a pris environ 4 minutes au premier appel
 (telechargement inclus).
 
-## Endpoint
+### Endpoint
 
-### `GET /say/?sentence=...&speaker=...&mood=...`
+`GET /say/?sentence=...&speaker=...&mood=...`
 
 | Parametre  | Obligatoire | Valeurs possibles                                                          | Defaut    |
 |------------|:-----------:|-----------------------------------------------------------------------------|-----------|
@@ -75,9 +75,9 @@ Lors des tests, une phrase courte a pris environ 4 minutes au premier appel
     de la reponse liste les valeurs acceptees)
   - `500` : erreur du modele NeuTTS-2e pendant l'inference
 
-## Exemples d'appel
+### Exemples d'appel
 
-### cURL
+**cURL**
 
 ```bash
 curl -G "http://127.0.0.1:8000/say/" \
@@ -87,13 +87,13 @@ curl -G "http://127.0.0.1:8000/say/" \
   --output reponse.wav
 ```
 
-### Navigateur
+**Navigateur**
 
 Ouvrir `http://127.0.0.1:8000/`, saisir une phrase, choisir une voix et une
 emotion, cliquer sur "Generer l'audio" : le fichier WAV est recupere et joue
 directement dans la page.
 
-### Postman
+**Postman**
 
 - Methode : `GET`
 - URL : `http://127.0.0.1:8000/say/`
@@ -101,7 +101,7 @@ directement dans la page.
 - La reponse binaire (WAV) peut etre ecoutee directement dans l'onglet
   "Body" de Postman (previsualisation audio)
 
-## Notes
+### Notes
 
 - `NeuTTS2E()` (voir [tts/views.py](tts/views.py)) expose 4 voix "pre-cuites"
   (`emily`, `paul`, `sophie`, `steven`) sans avoir besoin d'audio de
