@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>text2audio · NeuTTS-2e</title>
+<style>
+  :root {
+    --bg: #0b0b0e;
+    --surface: #17181d;
+    --surface-2: #1e1f26;
+    --surface-3: #26272f;
+    --border: #2c2d36;
+    --text: #f4f4f6;
+    --muted: #8b8d97;
+    --accent: #fa3913;
+    --accent-text: #14151a;
+    --info: #3d8bfd;
+    --error: #ff4d4d;
+    --success: #7ed957;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1.25rem;
+  }
+  .card {
+    width: 100%;
+    max-width: 580px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+  }
+
+  .brand { display: flex; align-items: center; gap: .8rem; }
+  .brand-icon {
+    flex: none;
+    width: 44px; height: 44px; border-radius: 10px;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+  }
+  h1 {
+    font-size: 1.15rem; margin: 0; letter-spacing: .01em;
+    text-transform: uppercase; font-weight: 800;
+  }
+  .subtitle { color: var(--muted); font-size: .82rem; margin: .2rem 0 0; }
+
+  .waveform {
+    display: flex; align-items: flex-end; gap: 3px;
+    height: 34px; margin: 1.5rem 0;
+    padding: 0 2px;
+  }
+  .waveform span {
+    flex: 1; background: var(--surface-3); border-radius: 2px; min-width: 2px;
+  }
+  .waveform span.hot { background: var(--accent); }
+
+  p.lead {
+    color: var(--muted); font-size: .85rem; line-height: 1.55;
+    margin: 0 0 1.75rem;
+  }
+  p.lead a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+  p.lead a:hover { color: var(--accent); }
+
+  fieldset { border: 0; padding: 0; margin: 0 0 1.5rem; }
+  label.field-label {
+    display: block; font-size: .72rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--muted); margin-bottom: .6rem;
+  }
+
+  textarea {
+    width: 100%; resize: vertical; min-height: 90px;
+    font: inherit; font-size: .95rem; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: .85rem 1rem; transition: border-color .15s;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+
+  .field-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: .5rem; font-size: .72rem; color: var(--muted);
+  }
+
+  .pill-group { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .pill-group input { position: absolute; opacity: 0; pointer-events: none; }
+  .pill-group label {
+    cursor: pointer; padding: .5rem .85rem; border-radius: 8px;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    font-size: .85rem; font-weight: 600; display: flex; align-items: center; gap: .5rem;
+    transition: border-color .15s, background .15s, color .15s;
+    user-select: none;
+  }
+  .pill-group label:hover { border-color: var(--chip-color, var(--accent)); }
+  .pill-group input:checked + label {
+    background: var(--chip-color, var(--accent));
+    border-color: var(--chip-color, var(--accent));
+    color: var(--accent-text);
+  }
+  .pill-group input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%; flex: none;
+    background: var(--chip-color, var(--accent));
+  }
+  .pill-group input:checked + label .dot { background: var(--accent-text); }
+  .pill-emoji { font-size: .95rem; line-height: 1; }
+
+  button#generate {
+    width: 100%; margin-top: .25rem; padding: .95rem 1.25rem; border: 0; border-radius: 10px;
+    background: var(--accent); color: #fff; font-size: .9rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .06em;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .65rem;
+    transition: filter .15s, transform .05s;
+  }
+  button#generate:hover:not(:disabled) { filter: brightness(1.1); }
+  button#generate:active:not(:disabled) { transform: scale(.99); }
+  button#generate:disabled { opacity: .8; cursor: progress; }
+
+  .eq { display: none; align-items: flex-end; gap: 3px; height: 16px; }
+  button#generate.loading .eq { display: flex; }
+  .eq span { width: 3px; background: #fff; border-radius: 1px; animation: eq .8s ease-in-out infinite; }
+  .eq span:nth-child(1) { animation-delay: 0s; }
+  .eq span:nth-child(2) { animation-delay: .15s; }
+  .eq span:nth-child(3) { animation-delay: .3s; }
+  .eq span:nth-child(4) { animation-delay: .45s; }
+  @keyframes eq {
+    0%, 100% { height: 4px; }
+    50% { height: 16px; }
+  }
+
+  #status {
+    margin-top: 1.1rem; padding: .7rem .9rem; border-radius: 8px; font-size: .83rem;
+    display: none; align-items: flex-start; gap: .5rem; line-height: 1.4;
+    background: var(--surface-2); border-left: 3px solid var(--muted);
+  }
+  #status.show { display: flex; }
+  #status.info { border-left-color: var(--info); color: var(--info); }
+  #status.error { border-left-color: var(--error); color: var(--error); }
+  #status.success { border-left-color: var(--success); color: var(--success); }
+
+  .player-wrap {
+    margin-top: 1.35rem; display: none;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem;
+  }
+  .player-wrap.show { display: block; }
+  audio { width: 100%; }
+  .download-link {
+    display: inline-flex; align-items: center; gap: .4rem;
+    margin-top: .75rem; padding: .5rem .8rem;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text); text-decoration: none;
+  }
+  .download-link:hover { border-color: var(--accent); color: var(--accent); }
+
+  footer { margin-top: 1.9rem; text-align: center; font-size: .72rem; color: var(--muted); }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand">
+      <div class="brand-icon">🎙️</div>
+      <div>
+        <h1>text2audio</h1>
+        <p class="subtitle">Studio vocal local — NeuTTS-2e</p>
+      </div>
+    </div>
+
+    <div class="waveform" id="waveform"></div>
+
+    <p class="lead">
+      Transforme un texte en voix grace au modele
+      <a href="https://github.com/neuphonic/neutts" target="_blank" rel="noopener">NeuTTS-2e</a>,
+      execute entierement en local (aucune donnee envoyee a un service externe).
+    </p>
+
+    <fieldset>
+      <label class="field-label" for="sentence">Phrase a lire</label>
+      <textarea id="sentence" maxlength="500">Bonjour, ceci est un test de synthese vocale.</textarea>
+      <div class="field-footer">
+        <span>Ctrl + Entree pour generer</span>
+        <span><span id="charCount">0</span>/500</span>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <label class="field-label">Voix</label>
+      <div class="pill-group" id="speakerGroup">
+        {% for speaker in speakers %}
+        <input type="radio" name="speaker" id="speaker-{{ speaker }}" value="{{ speaker }}" {% if forloop.first %}checked{% endif %}>
+        <label for="speaker-{{ speaker }}">
+          <span class="dot"></span>{{ speaker|capfirst }}
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <label class="field-label">Emotion</label>
+      <div class="pill-group" id="moodGroup">
+        {% for mood in moods %}
+        <input type="radio" name="mood" id="mood-{{ mood }}" value="{{ mood }}" {% if mood == "neutral" %}checked{% endif %}>
+        <label for="mood-{{ mood }}">
+          <span class="pill-emoji" data-mood="{{ mood }}"></span>{{ mood|capfirst }}
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <button id="generate" type="button">
+      <span class="eq"><span></span><span></span><span></span><span></span></span>
+      <span class="btn-label">Generer l'audio</span>
+    </button>
+
+    <p id="status"></p>
+
+    <div class="player-wrap" id="playerWrap">
+      <audio id="player" controls></audio>
+      <a id="downloadLink" class="download-link" download="text2audio.wav">⬇ Telecharger le WAV</a>
+    </div>
+
+    <footer>
+      Genere par <a href="https://github.com/neuphonic/neutts" target="_blank" rel="noopener">neuphonic/neutts</a>
+      · execution 100% locale
+    </footer>
+  </main>
+
+<script>
+const PALETTE = ["#fa3913", "#ffb800", "#00c2a8", "#3d8bfd", "#b26eff", "#ff5c8a", "#7ed957"];
+
+function colorizeGroup(selector) {
+  document.querySelectorAll(`${selector} label`).forEach((label, i) => {
+    label.style.setProperty("--chip-color", PALETTE[i % PALETTE.length]);
+  });
+}
+colorizeGroup("#speakerGroup");
+colorizeGroup("#moodGroup");
+
+const MOOD_EMOJI = {
+  neutral: "😐", angry: "😠", sad: "😢", happy: "😄",
+  surprised: "😲", disgusted: "🤢", fearful: "😨",
+};
+document.querySelectorAll(".pill-emoji").forEach((el) => {
+  el.textContent = MOOD_EMOJI[el.dataset.mood] || "🎭";
+});
+
+// Decorative static waveform under the header.
+const WAVE_HEIGHTS = [30,55,20,70,45,90,35,60,25,80,50,65,20,75,40,95,30,55,20,70,45,85,35,60,25,50];
+const waveform = document.getElementById("waveform");
+WAVE_HEIGHTS.forEach((h, i) => {
+  const bar = document.createElement("span");
+  bar.style.height = `${h}%`;
+  if (i % 6 === 0) bar.classList.add("hot");
+  waveform.appendChild(bar);
+});
+
+const sentenceEl = document.getElementById("sentence");
+const charCount = document.getElementById("charCount");
+const button = document.getElementById("generate");
+const btnLabel = button.querySelector(".btn-label");
+const status = document.getElementById("status");
+const playerWrap = document.getElementById("playerWrap");
+const player = document.getElementById("player");
+const downloadLink = document.getElementById("downloadLink");
+
+const STATUS_ICON = { info: "⏳", error: "⚠️", success: "✅" };
+
+function updateCharCount() {
+  charCount.textContent = sentenceEl.value.length;
+}
+sentenceEl.addEventListener("input", updateCharCount);
+updateCharCount();
+
+sentenceEl.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    event.preventDefault();
+    button.click();
+  }
+});
+
+function getSelected(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : "";
+}
+
+function setStatus(message, type) {
+  status.innerHTML = "";
+  const icon = document.createElement("span");
+  icon.textContent = STATUS_ICON[type] || "";
+  const text = document.createElement("span");
+  text.textContent = message;
+  status.append(icon, text);
+  status.className = `show ${type}`;
+}
+
+button.addEventListener("click", async () => {
+  const sentence = sentenceEl.value.trim();
+  const speaker = getSelected("speaker");
+  const mood = getSelected("mood");
+
+  if (!sentence) {
+    setStatus("Merci de saisir une phrase.", "error");
+    sentenceEl.focus();
+    return;
+  }
+
+  button.disabled = true;
+  button.classList.add("loading");
+  btnLabel.textContent = "Generation...";
+  setStatus("Generation en cours (le tout premier appel peut prendre plusieurs minutes).", "info");
+  playerWrap.classList.remove("show");
+
+  const params = new URLSearchParams({ sentence, speaker, mood });
+
+  try {
+    const response = await fetch(`/say/?${params.toString()}`);
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || `Erreur HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    player.src = url;
+    downloadLink.href = url;
+    playerWrap.classList.add("show");
+    player.play();
+    setStatus("Audio genere avec succes.", "success");
+  } catch (error) {
+    setStatus(error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.classList.remove("loading");
+    btnLabel.textContent = "Generer l'audio";
+  }
+});
+</script>
+</body>
+</html>
