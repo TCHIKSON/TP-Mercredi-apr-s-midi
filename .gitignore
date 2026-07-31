@@ -221,3 +221,8 @@ __marimo__/
 yolo/*.pt
 yolo/runs/
 yolo/venv/
+
+# MNIST-Fashion+torch (dataset volumineux + checkpoints entraines)
+MNIST-Fashion+torch/MNIST-dataset/
+MNIST-Fashion+torch/checkpoints/
+MNIST-Fashion+torch/venv/
